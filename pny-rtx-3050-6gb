@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Flat PNG Viewer dengan Deskripsi & Referensi</title>
+<style>
+  :root{
+    --bg: #0f1720;
+    --size: 84vmin;
+    --thumb-h: 64px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto;
+    background: linear-gradient(180deg,#071018, #081226);
+    color:#e6eef8;
+    padding:18px;
+  }
+    .navbar {
+    background:#e6eef8;
+    border-bottom:1px solid #ddd;
+    padding:12px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position:fixed;
+    top:0;left:0;right:0;
+    z-index:1000;
+  }
+  .navbar .title-nav {
+    font-size:18px;
+    color:black;
+    font-weight:600;
+  }
+  .navbar button {
+    background:none;
+    border:none;
+    font-size:22px;
+    cursor:pointer;
+  }
+
+  /* Drawer menu */
+  .drawer {
+    position:fixed;
+    top:0;left:-260px;
+    width:240px;
+    height:100%;
+    background:#fff;
+    box-shadow:2px 0 8px rgba(0,0,0,0.15);
+    padding:20px;
+    transition:left 0.3s ease;
+    z-index:1100;
+  }
+  .drawer.open { left:0; }
+  .drawer h3 { margin-bottom:12px; font-size:16px; }
+  .drawer a {
+    display:block;
+    padding:10px 0;
+    color:#333;
+    text-decoration:none;
+    border-bottom:1px solid #eee;
+  }
+  .drawer a:hover { background:#f5f5f5; }
+
+  /* Overlay */
+  .overlay {
+    position:fixed;
+    top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.3);
+    display:none;
+    z-index:1050;
+  }
+  .overlay.show { display:block; }
+
+  /* Main content */
+  .content {
+    flex:1;
+    padding:70px 16px 70px;
+  }
+
+.title {
+  font-size: 14px;        /* ukuran sedang */
+  font-weight: 600;
+  text-align: center;
+  margin: 12px 0;
+  color: #e6eef8;
+}
+
+  .viewer {
+    width: 100%;
+    max-width: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    display:flex;
+    gap:12px;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .stage {
+    width:100%;
+    height: calc(var(--size) * 0.9);
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.15));
+    border-radius: 0;
+    overflow:hidden;
+    position:relative;
+    touch-action: none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .imgwrap {
+    position: absolute;
+    will-change: transform;
+    cursor: grab;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .imgwrap.grabbing { cursor: grabbing; }
+
+  .imgwrap img {
+    max-width: 100%;
+    max-height: 100%;
+    user-select:none;
+    pointer-events:none;
+    display:block;
+    transform-origin: center center;
+    border-radius:6px;
+  }
+
+  .controls {
+    width:100%;
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    align-items:center;
+  }
+  .btn {
+    background: rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.04);
+    color: #dfefff;
+    padding:8px 10px;
+    border-radius:8px;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .btn.toggle.active { background: rgba(100,180,255,0.12); }
+
+  .thumbs {
+    display:flex;
+    gap:8px;
+    align-items:center;
+    overflow:auto;
+    padding:8px 0;
+    width:100%;
+  }
+  .thumb {
+    height: var(--thumb-h);
+    min-width: calc(var(--thumb-h) * 1.33);
+    background:#081025;
+    border-radius:8px;
+    overflow:hidden;
+    border:2px solid transparent;
+    cursor:pointer;
+    flex: 0 0 auto;
+  }
+  .thumb img { height:100%; width:100%; object-fit:cover; display:block; }
+  .thumb.active { border-color: rgba(100,180,255,0.22); box-shadow: 0 6px 16px rgba(0,0,0,0.6); }
+
+  .info { font-size:13px; color:#bcd7ff; opacity:0.9; }
+
+  details {
+    width:100%;
+    background: rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.05);
+    border-radius:8px;
+    padding:8px 12px;
+    cursor:pointer;
+  }
+  details[open] { background: rgba(255,255,255,0.05); }
+  summary {
+    font-weight:600;
+    outline:none;
+    list-style:none;
+  }
+  summary::-webkit-details-marker { display:none; }
+  .desc { margin-top:8px; font-size:14px; line-height:1.5; }
+  .refs { margin-top:8px; font-size:14px; line-height:1.5; }
+  .refs a { display:block; margin:4px 0; color:#77baff; text-decoration:none; }
+  .refs a:hover { text-decoration:underline; }
+
+  @media (max-width:520px){
+    :root{ --size: 92vmin; --thumb-h:52px; }
+    .btn { padding:6px 8px; font-size:13px; }
+  }
+</style>
+</head>
+<body>
+<div class="navbar">
+  <div class="title-nav">Asistenly</div>
+  <button id="menuBtn">☰</button>
+</div>
+
+<!-- Drawer -->
+<div class="drawer" id="drawer">
+  <h3>Menu</h3>
+  <a href="#">Profil</a>
+  <a href="#">Pengaturan</a>
+  <a href="#">Bantuan</a>
+  <a href="#">Keluar</a>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="viewer" id="viewer">
+    <br/>
+<h2 class="title">Preview PNY RTX 3050 6 GB</h2>
+  <div class="stage" id="stage">
+    <div class="imgwrap" id="imgwrap">
+      <img id="mainImg" src="" alt="Sisi" />
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="autoplayBtn">Autoplay</button>
+    <button class="btn" id="zoomOut">–</button>
+    <div class="info" id="zoomInfo">100%</div>
+    <button class="btn" id="zoomIn">+</button>
+    <button class="btn" id="rotateLeft">⟲</button>
+    <button class="btn" id="rotateRight">⟳</button>
+    <button class="btn" id="resetBtn">Reset</button>
+  </div>
+
+  <div class="thumbs" id="thumbs"></div>
+
+  <details>
+    <summary>Deskripsi</summary>
+    <div class="desc">
+      Ini adalah contoh deskripsi gambar yang bisa dibuka/tutup seperti spoiler.
+      Kamu bisa menaruh penjelasan detail tentang gambar di sini.
+    </div>
+  </details>
+
+  <details>
+    <summary>Referensi Gambar</summary>
+    <div class="refs" id="refs"></div>
+  </details>
+</div>
+
+<script>
+const imageUrls = [
+  'https://www.pny.com/productimages/70238833-C37D-4CAC-BED1-B125010958A0/images/PNY-GeForce-RTX-3050-6GB-top.png?text=Front',
+  'https://www.pny.com/productimages/70238833-C37D-4CAC-BED1-B125010958A0/images/PNY-GeForce-RTX-3050-6GB-top-3.png?text=Right',
+  'https://www.pny.com/productimages/70238833-C37D-4CAC-BED1-B125010958A0/images/PNY-GeForce-RTX-3050-6GB-fr.png?text=Back',
+  'https://www.pny.com/productimages/70238833-C37D-4CAC-BED1-B125010958A0/images/PNY-GeForce-RTX-3050-6GB-backplate-2.png?text=Left'
+];
+
+let index = 0, scale = 1, rotation = 0, offsetX=0, offsetY=0;
+const mainImg = document.getElementById('mainImg');
+const imgwrap = document.getElementById('imgwrap');
+const thumbs = document.getElementById('thumbs');
+const zoomInfo = document.getElementById('zoomInfo');
+const refs = document.getElementById('refs');
+
+function loadIndex(i){
+  index = (i + imageUrls.length) % imageUrls.length;
+  mainImg.src = imageUrls[index];
+  Array.from(thumbs.children).forEach((t, idx)=>{
+    t.classList.toggle('active', idx === index);
+  });
+  resetView(false);
+}
+
+/* Build thumbnails & refs */
+imageUrls.forEach((u,i)=>{
+  const t=document.createElement('div');
+  t.className='thumb';
+  if(i===0) t.classList.add('active');
+  const im=document.createElement('img'); im.src=u;
+  t.appendChild(im);
+  t.addEventListener('click', ()=> loadIndex(i));
+  thumbs.appendChild(t);
+
+  const link=document.createElement('a');
+  link.href=u;
+  link.target='_blank';
+  link.textContent=`Gambar ${i+1}`;
+  refs.appendChild(link);
+});
+
+loadIndex(0);
+
+function applyTransform(){
+  imgwrap.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(${rotation}deg) scale(${scale})`;
+  zoomInfo.textContent = `${Math.round(scale*100)}%`;
+}
+function resetView(full){
+  scale=1; rotation=0; offsetX=0; offsetY=0;
+  applyTransform();
+}
+
+/* Buttons */
+document.getElementById('zoomIn').onclick=()=>{ scale=Math.min(4,scale*1.2); applyTransform(); }
+document.getElementById('zoomOut').onclick=()=>{ scale=Math.max(0.25,scale/1.2); applyTransform(); }
+document.getElementById('rotateLeft').onclick=()=>{ rotation-=15; applyTransform(); }
+document.getElementById('rotateRight').onclick=()=>{ rotation+=15; applyTransform(); }
+document.getElementById('resetBtn').onclick=()=>resetView(true);
+
+/* Autoplay */
+let autoplay=false, autoId=null;
+const autoBtn=document.getElementById('autoplayBtn');
+autoBtn.onclick=()=>{
+  autoplay=!autoplay;
+  autoBtn.classList.toggle('active', autoplay);
+  autoBtn.textContent=autoplay?'Stop':'Autoplay';
+  if(autoplay){
+    autoId=setInterval(()=>loadIndex(index+1),2200);
+  } else clearInterval(autoId);
+};
+
+/* Wheel zoom */
+const stage=document.getElementById('stage');
+stage.addEventListener('wheel', e=>{
+  e.preventDefault();
+  scale*= (e.deltaY>0?0.9:1.1);
+  scale=Math.max(0.25,Math.min(4,scale));
+  applyTransform();
+},{passive:false});
+
+/* Drag pan */
+let drag=false, last={x:0,y:0};
+stage.addEventListener('pointerdown',e=>{
+  drag=true; last={x:e.clientX,y:e.clientY};
+  imgwrap.classList.add('grabbing');
+});
+stage.addEventListener('pointermove',e=>{
+  if(!drag) return;
+  offsetX+=e.clientX-last.x; offsetY+=e.clientY-last.y;
+  last={x:e.clientX,y:e.clientY};
+  applyTransform();
+});
+stage.addEventListener('pointerup',()=>{drag=false; imgwrap.classList.remove('grabbing');});
+stage.addEventListener('pointerleave',()=>{drag=false; imgwrap.classList.remove('grabbing');});
+
+mainImg.ondragstart=e=>e.preventDefault();
+applyTransform();
+</script>
+<script>
+const menuBtn=document.getElementById('menuBtn');
+const drawer=document.getElementById('drawer');
+const overlay=document.getElementById('overlay');
+
+menuBtn.addEventListener('click',()=>{
+  drawer.classList.toggle('open');
+  overlay.classList.toggle('show');
+});
+overlay.addEventListener('click',()=>{
+  drawer.classList.remove('open');
+  overlay.classList.remove('show');
+});
+</script>
+</body>
+</html>
